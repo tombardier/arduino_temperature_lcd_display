@@ -1,0 +1,57 @@
+#include <SevSeg.h>
+// the value of the 'other' resistor
+#define SERIESRESISTOR 10000    
+// What pin to connect the sensor to
+#define THERMISTORPIN A0 
+#define TEMPERATURENOMINAL 25   
+#define BCOEFFICIENT 3950
+#define INTERVAL 1000
+
+// Numeric pins on 7-segment board
+#define SP_1 22
+#define SP_2 24
+#define SP_3 26
+#define SP_4 28
+
+// alpha and period pins on 7-segment board
+#define SP_A 23
+#define SP_B 27
+#define SP_C 51
+#define SP_D 53
+#define SP_E 52
+#define SP_F 25
+#define SP_G 48
+#define SP_DOT 50
+
+
+SevSeg sevseg;
+unsigned long previous_time = 0;
+
+void setup(void) {
+  Serial.begin(9600);
+  byte num_digits = 4;
+  byte digit_pins[] = {SP_1, SP_2, SP_3, SP_4};
+  byte segment_pins[] = {SP_A, SP_B, SP_C, SP_D, SP_E, SP_F, SP_G, SP_DOT};
+  sevseg.begin(COMMON_CATHODE, num_digits, digit_pins, segment_pins);
+  sevseg.setBrightness(10);
+}
+     
+void loop(void) {
+  float reading;
+  float resistance;
+  float celsius;
+  unsigned long current_time = millis();
+
+  if (current_time - previous_time > INTERVAL) {
+    previous_time = millis();
+    reading = analogRead(THERMISTORPIN);
+    resistance = SERIESRESISTOR / (1023 / reading - 1);
+    celsius = 1.0 / ((log(resistance / SERIESRESISTOR) / BCOEFFICIENT) + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.15;
+
+    Serial.print("Temperature ");
+    Serial.print((int)celsius);
+    Serial.println(" C");
+  }
+  sevseg.setNumber((int)celsius, 0);
+  sevseg.refreshDisplay();
+}
